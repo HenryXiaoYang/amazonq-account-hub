@@ -9,5 +9,5 @@ services:
       - PORT=8080
       - PASSKEY=${PASSKEY}
     volumes:
-      - ./accounts.db:/app/accounts.db
+      - ./database:/app/database
     restart: unless-stopped
