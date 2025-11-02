@@ -84,6 +84,8 @@ const parseCSV = (text: string) => {
     const line = lines[i]
     if (!line) continue
     const parts = line.split(',')
+    const enabled = parts[0]?.toLowerCase().trim()
+    if (enabled === 'false') continue
     if (parts.length >= 4 && parts[1] && parts[2]) {
       accounts.push({
         refresh_token: parts[1],
