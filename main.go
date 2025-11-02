@@ -32,6 +32,7 @@ type Metric struct {
 var db *gorm.DB
 
 func initDB() {
+	os.MkdirAll("database", 0755)
 	var err error
 	db, err = gorm.Open(sqlite.Open("database/accounts.db"), &gorm.Config{})
 	if err != nil {
