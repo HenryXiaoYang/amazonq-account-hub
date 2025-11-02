@@ -32,11 +32,13 @@ type Metric struct {
 var db *gorm.DB
 
 func initDB() {
-	os.MkdirAll("database", 0755)
+	if err := os.MkdirAll("database", 0755); err != nil {
+		panic("failed to create database directory: " + err.Error())
+	}
 	var err error
 	db, err = gorm.Open(sqlite.Open("database/accounts.db"), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		panic("failed to connect database: " + err.Error())
 	}
 	err = db.AutoMigrate(&Account{}, &Metric{})
 	if err != nil {

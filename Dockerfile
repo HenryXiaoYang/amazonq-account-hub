@@ -7,10 +7,11 @@ RUN npm run build
 
 FROM golang:1.25-alpine AS backend-builder
 WORKDIR /app
+RUN apk add --no-cache gcc musl-dev
 COPY go.mod go.sum ./
 RUN go mod download
 COPY *.go ./
-RUN go build -o main .
+RUN CGO_ENABLED=1 go build -o main .
 
 FROM alpine:latest
 WORKDIR /app
