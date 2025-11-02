@@ -17,6 +17,7 @@ type Account struct {
 	RefreshToken string `json:"refresh_token"`
 	ClientID     string `gorm:"uniqueIndex" json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+	Enabled      bool   `gorm:"default:true" json:"enabled"`
 }
 
 type Metric struct {
@@ -74,6 +75,7 @@ func main() {
 	r.POST("/api/auth", authenticate)
 	r.GET("/api/accounts", getAccounts)
 	r.POST("/api/accounts", addAccounts)
+	r.POST("/api/accounts/enable-all", enableAllAccounts)
 	r.GET("/api/metrics", getMetrics)
 
 	r.Static("/assets", "./frontend/dist/assets")
@@ -141,22 +143,22 @@ func getAccounts(c *gin.Context) {
 	var accounts []Account
 	if count > 0 {
 		var total int64
-		db.Model(&Account{}).Count(&total)
+		db.Model(&Account{}).Where("enabled = ?", true).Count(&total)
 		if int(total) < count {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "insufficient accounts", "available": total, "requested": count})
 			return
 		}
 
-		db.Limit(count).Find(&accounts)
+		db.Where("enabled = ?", true).Limit(count).Find(&accounts)
 		for _, account := range accounts {
-			db.Delete(&account)
+			db.Model(&account).Update("enabled", false)
 		}
 
 		var lastMetric Metric
 		db.Order("id desc").First(&lastMetric)
 
 		var current int64
-		db.Model(&Account{}).Count(&current)
+		db.Model(&Account{}).Where("enabled = ?", true).Count(&current)
 
 		now := time.Now()
 		hour := now.Format("2006-01-02 15:00:00")
@@ -228,6 +230,37 @@ func addAccounts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "accounts added"})
+}
+
+func enableAllAccounts(c *gin.Context) {
+	db.Model(&Account{}).Where("enabled = ?", false).Update("enabled", true)
+
+	var lastMetric Metric
+	db.Order("id desc").First(&lastMetric)
+
+	var current int64
+	db.Model(&Account{}).Where("enabled = ?", true).Count(&current)
+
+	now := time.Now()
+	hour := now.Format("2006-01-02 15:00:00")
+
+	var hourMetric Metric
+	if db.Where("hour = ?", hour).First(&hourMetric).Error == nil {
+		hourMetric.CurrentCount = int(current)
+		hourMetric.Timestamp = now
+		db.Save(&hourMetric)
+	} else {
+		db.Create(&Metric{
+			CurrentCount: int(current),
+			TotalCount:   lastMetric.TotalCount,
+			UsedCount:    lastMetric.UsedCount,
+			APICallCount: lastMetric.APICallCount,
+			Timestamp:    now,
+			Hour:         hour,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "all accounts enabled"})
 }
 
 func getMetrics(c *gin.Context) {

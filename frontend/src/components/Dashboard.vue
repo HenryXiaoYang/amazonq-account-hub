@@ -34,6 +34,7 @@ const metrics = ref<Metric[]>([])
 const csvInput = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const toast = ref({ show: false, message: '', type: 'success' })
+const showEnableModal = ref(false)
 
 const API_BASE = '/api'
 
@@ -125,6 +126,13 @@ const handleFileUpload = async (e: Event) => {
   }
 }
 
+const enableAllAccounts = async () => {
+  await fetch(`${API_BASE}/accounts/enable-all`, { method: 'POST' })
+  showEnableModal.value = false
+  await fetchStats()
+  showToast('All accounts enabled successfully')
+}
+
 onMounted(() => {
   fetchStats()
   setInterval(() => {
@@ -138,7 +146,10 @@ onMounted(() => {
     <div class="border-b bg-white shadow-sm">
       <div class="container mx-auto flex h-16 items-center justify-between px-6">
         <h1 class="text-xl font-semibold">Amazon Q Account Hub</h1>
-        <Button variant="ghost" @click="emit('logout')">Logout</Button>
+        <div class="flex gap-2">
+          <Button @click="showEnableModal = true">Enable All Accounts</Button>
+          <Button variant="ghost" @click="emit('logout')">Logout</Button>
+        </div>
       </div>
     </div>
 
@@ -224,6 +235,21 @@ onMounted(() => {
       <Alert :variant="toast.type === 'success' ? 'default' : 'destructive'">
         <AlertDescription>{{ toast.message }}</AlertDescription>
       </Alert>
+    </div>
+
+    <div v-if="showEnableModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card class="w-96">
+        <CardHeader>
+          <CardTitle>Enable All Accounts</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <p>Are you sure you want to enable all disabled accounts?</p>
+          <div class="flex gap-2 justify-end">
+            <Button variant="ghost" @click="showEnableModal = false">Cancel</Button>
+            <Button @click="enableAllAccounts">Confirm</Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   </div>
 </template>
