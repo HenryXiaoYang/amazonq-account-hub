@@ -46,7 +46,7 @@ func initDB() {
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		panic(err)
+		println("No .env file found, proceeding with environment variables")
 	}
 	initDB()
 
